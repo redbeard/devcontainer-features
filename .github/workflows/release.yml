@@ -1,0 +1,28 @@
+name: Release dev container features
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["src/**"]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # generate-docs commits the generated README back
+      packages: write # push the Feature to ghcr.io
+    steps:
+      - uses: actions/checkout@v4
+
+      # Publishes each directory under src/ as an OCI artifact at
+      # ghcr.io/<owner>/<repo>/<feature-id>:<version>, tagged per semver
+      # (1, 1.0, 1.0.0) so consumers can pin at whatever precision they want.
+      - name: Publish features
+        uses: devcontainers/action@v1
+        with:
+          publish-features: "true"
+          base-path-to-features: "./src"
+          generate-docs: "true"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

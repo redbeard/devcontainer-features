@@ -1,0 +1,23 @@
+{
+  "id": "gh-auth-from-host",
+  "version": "1.0.0",
+  "name": "GitHub CLI auth from the host",
+  "description": "Authenticates the gh CLI inside the container using the host's GitHub credential, via the git credential helper the Dev Containers extension already forwards. Refreshes on every attach, so the container never holds a credential of its own.",
+  "documentationURL": "https://github.com/redbeard/devcontainer-features/tree/main/src/gh-auth-from-host",
+  "options": {
+    "githubHostname": {
+      "type": "string",
+      "default": "github.com",
+      "description": "GitHub hostname to authenticate against. Set to your GHES hostname for GitHub Enterprise Server. (Named githubHostname, not hostname: option names become uppercased env vars at install time, and HOSTNAME is already the container's own hostname.)"
+    },
+    "overrideExisting": {
+      "type": "boolean",
+      "default": true,
+      "description": "Replace an existing container-local gh credential with the host's. Set false to keep a deliberately-scoped container credential (e.g. a narrow PAT); the host is then used only when gh has no WORKING credential, so a dead one is still repaired."
+    }
+  },
+  "dependsOn": {
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "postAttachCommand": "/usr/local/share/gh-auth-from-host/refresh.sh"
+}
