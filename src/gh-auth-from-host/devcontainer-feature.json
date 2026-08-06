@@ -1,6 +1,6 @@
 {
   "id": "gh-auth-from-host",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "name": "GitHub CLI auth from the host",
   "description": "Authenticates the gh CLI inside the container using the host's GitHub credential, via the git credential helper the Dev Containers extension already forwards. Refreshes on every attach, so the container never holds a credential of its own.",
   "documentationURL": "https://github.com/redbeard/devcontainer-features/tree/main/src/gh-auth-from-host",

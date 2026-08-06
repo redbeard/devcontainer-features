@@ -45,6 +45,7 @@ The alternative most people land on — running `gh auth login` inside the conta
 ## Behaviour notes
 
 - **Never exits non-zero.** A Feature's failing lifecycle hook halts the entire sequence — later Features' hooks and the project's own — so every failure path warns and stands down.
+- **gh's own credential helper is excluded from the question.** `gh auth setup-git` run *inside* the container installs gh as git's helper, and the config section it writes opens with an empty `helper =` that **resets the helper list** — wiping the editor's forwarded helper for that host. A plain `git credential fill` would then hand back gh's own stored token, which this hook would match against what gh already has and report as success, while the stale credential quietly survived. Only non-gh helpers are consulted; if that leaves none, the hook says so rather than accepting gh's answer as the host's.
 - **Idempotent.** When the container already holds exactly what the host offers, it does nothing: no config rewrite, no API call. It runs on every attach, including waking from sleep.
 - **This is coupling, not isolation.** The container's `gh` is exactly as alive as the host's. If you want a credential revocable independently of your laptop's, use a container PAT with `overrideExisting: false` instead.
 - Git push/pull over SSH is unaffected — that's SSH agent forwarding, which the editor handles separately.

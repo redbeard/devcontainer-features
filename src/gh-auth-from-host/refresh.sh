@@ -38,19 +38,46 @@ fi
 
 # `timeout` is absent from some minimal images; degrade to a bare call there.
 if command -v timeout >/dev/null 2>&1; then
-  fill() { timeout 30 git credential fill 2>/dev/null; }
+  fill() { timeout 30 git "$@" credential fill 2>/dev/null; }
 else
-  fill() { git credential fill 2>/dev/null; }
+  fill() { git "$@" credential fill 2>/dev/null; }
 fi
 
-token="$(printf 'protocol=https\nhost=%s\n\n' "$hostname_opt" | fill | awk -F= '/^password=/{print $2}')" || token=""
+# Ask the host for the credential with gh's OWN helper excluded, so the question
+# can only be answered by the host.
+#
+# `gh auth setup-git` — which a contributor may well have run inside the
+# container — installs gh as git's credential helper, and the config section it
+# writes OPENS WITH AN EMPTY `helper =`, which resets the helper list and so
+# wipes the editor's forwarded helper for this host. A plain `git credential
+# fill` then returns gh's own stored token; the comparison below matches it; and
+# this hook reports success while the stale container credential quietly
+# survives — exactly the rot it exists to prevent.
+#
+# So rebuild the list explicitly: reset the generic and host-scoped keys (later
+# -c options win), then re-add every configured helper that isn't gh. If that
+# leaves nothing, the host genuinely has no helper here and we say so, rather
+# than accepting gh's own answer as if it came from the host.
+helpers="$( { git config --get-all credential.helper
+              git config --get-all "credential.https://${hostname_opt}.helper"
+            } 2>/dev/null | grep -v 'auth git-credential' | grep -v '^[[:space:]]*$' )" || true
+
+set -- -c credential.helper= -c "credential.https://${hostname_opt}.helper="
+saved_ifs=$IFS
+IFS='
+'
+for helper in $helpers; do set -- "$@" -c "credential.helper=$helper"; done
+IFS=$saved_ifs
+
+token="$(printf 'protocol=https\nhost=%s\n\n' "$hostname_opt" | fill "$@" | awk -F= '/^password=/{print $2}')" || token=""
 
 if [ -z "$token" ]; then
   # Legitimately absent when not attached from an editor that forwards
   # credentials (devcontainer CLI, bare docker exec), or when the host never ran
   # `gh auth setup-git`. Leave whatever gh already has alone.
   warn "host offered no credential for ${hostname_opt} — leaving gh as-is."
-  warn "  (attach via VS Code, or run 'gh auth setup-git' on the host)"
+  warn "  (attach via VS Code, or run 'gh auth setup-git' on the HOST — note that"
+  warn "   running it in the CONTAINER cannot satisfy this: gh is excluded here.)"
   exit 0
 fi
 
